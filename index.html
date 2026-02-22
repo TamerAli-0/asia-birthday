@@ -1340,18 +1340,19 @@ function initGallery() {
   }, { ...sig, passive: false });
   document.addEventListener('touchend', onEnd, sig);
 
-  // ── Gyroscope — left/right only (yaw) ──
+  // ── Gyroscope — left/right only (yaw), pauses during touch ──
   if (gyroHandler) { window.removeEventListener('deviceorientation', gyroHandler); gyroHandler = null; }
-  let gyroBaseA = null, gyroReady = false;
+  let gyroBaseA = null, gyroReady = false, gyroYawOffset = 0;
 
   gyroHandler = function(e) {
     if (e.alpha === null) return;
-    if (!gyroReady) { gyroBaseA = e.alpha; gyroReady = true; return; }
-    if (galDragging) { gyroBaseA = e.alpha; return; } // re-calibrate during drag
+    if (!gyroReady) { gyroBaseA = e.alpha; gyroYawOffset = galYaw; gyroReady = true; return; }
+    // While dragging: keep recalibrating so gyro picks up from where drag leaves off
+    if (galDragging) { gyroBaseA = e.alpha; gyroYawOffset = galYaw; return; }
     let dA = e.alpha - gyroBaseA;
     if (dA > 180) dA -= 360;
     if (dA < -180) dA += 360;
-    const targetYaw = dA * Math.PI / 120;
+    const targetYaw = gyroYawOffset + dA * Math.PI / 120;
     galYaw += (targetYaw - galYaw) * 0.08;
   };
 
