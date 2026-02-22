@@ -1007,6 +1007,7 @@ document.getElementById('galleryBack').addEventListener('click', () => {
 
   stopAmbientPiano();
   if (galleryRAF) { cancelAnimationFrame(galleryRAF); galleryRAF = null; }
+  if (gyroHandler) { window.removeEventListener('deviceorientation', gyroHandler); gyroHandler = null; }
   if (galAbort) { galAbort.abort(); galAbort = null; }
   if (galRenderer) {
     const c = document.getElementById('galleryRenderer');
@@ -1045,6 +1046,7 @@ document.getElementById('galleryBack').addEventListener('click', () => {
 // ══════════════════════════════════
 let galleryRAF = null;
 let galAbort = null;
+let gyroHandler = null;
 let galRenderer = null;
 let galScene3 = null;
 let galCamera = null;
@@ -1337,6 +1339,32 @@ function initGallery() {
     onMove(e.touches[0].clientX, e.touches[0].clientY);
   }, { ...sig, passive: false });
   document.addEventListener('touchend', onEnd, sig);
+
+  // ── Gyroscope — left/right only (yaw) ──
+  if (gyroHandler) { window.removeEventListener('deviceorientation', gyroHandler); gyroHandler = null; }
+  let gyroBaseA = null, gyroReady = false;
+
+  gyroHandler = function(e) {
+    if (e.alpha === null) return;
+    if (!gyroReady) { gyroBaseA = e.alpha; gyroReady = true; return; }
+    if (galDragging) { gyroBaseA = e.alpha; return; } // re-calibrate during drag
+    let dA = e.alpha - gyroBaseA;
+    if (dA > 180) dA -= 360;
+    if (dA < -180) dA += 360;
+    const targetYaw = -dA * Math.PI / 120;
+    galYaw += (targetYaw - galYaw) * 0.08;
+  };
+
+  if ('ontouchstart' in window) {
+    if (typeof DeviceOrientationEvent !== 'undefined' &&
+        typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission()
+        .then(p => { if (p === 'granted') window.addEventListener('deviceorientation', gyroHandler); })
+        .catch(() => {});
+    } else {
+      window.addEventListener('deviceorientation', gyroHandler);
+    }
+  }
 
   // ── Card click detection (raycasting) ──
   const raycaster = new THREE.Raycaster();
