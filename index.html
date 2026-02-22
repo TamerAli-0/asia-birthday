@@ -805,6 +805,7 @@ canvas {
 
 .gallery-3d {
   perspective: 800px;
+  perspective-origin: center center;
   width: 100vw;
   height: 100vh;
   display: flex;
@@ -812,6 +813,7 @@ canvas {
   justify-content: center;
   position: relative;
   z-index: 2;
+  transform-style: preserve-3d;
 }
 
 .gallery-scene {
@@ -1386,6 +1388,16 @@ document.getElementById('startBtn').addEventListener('click', () => {
   }, 800);
 });
 
+// Dev shortcut: ?page=gallery skips straight to gallery
+if (new URLSearchParams(location.search).get('page') === 'gallery') {
+  document.getElementById('startOverlay').style.display = 'none';
+  document.getElementById('pageCake').style.display = 'none';
+  document.getElementById('pageGallery').classList.add('active');
+  initParticleField('particleCanvas3', { count: 50, lite: true });
+  initGallery();
+  startAmbientPiano();
+}
+
 // ══════════════════════════════════
 //  PAGE TRANSITION — CAKE → MEMORIES
 // ══════════════════════════════════
@@ -1589,12 +1601,17 @@ let galLastY = 0;
 let galleryRAF = null;
 let gyroActive = false;
 let gyroHandler = null;
+let galAbort = null;  // AbortController to clean up listeners on reinit
 
 function initGallery() {
   const scene = document.getElementById('galleryScene');
-  const container = document.getElementById('gallery3d');
   const backdrop = document.getElementById('flyBackdrop');
   const cards = document.querySelectorAll('.gallery-card');
+
+  // Clean up previous listeners if reinit
+  if (galAbort) galAbort.abort();
+  galAbort = new AbortController();
+  const sig = { signal: galAbort.signal };
 
   galYaw = 0;
   galPitch = 0;
@@ -1605,20 +1622,21 @@ function initGallery() {
   const radius = window.innerWidth < 600 ? 260 : 360;
   const cardData = [];
   cards.forEach((card, i) => {
+    const dir = (i % 2 === 0) ? 1 : -1;
     cardData.push({
       angle: (i / cards.length) * 360,
-      speed: 0.12 + Math.random() * 0.15,         // varied orbit speeds
-      yBase: (Math.random() - 0.5) * 80,          // random base height
-      yAmp: 40 + Math.random() * 60,              // big vertical swing (40-100px)
-      ySpeed: 0.6 + Math.random() * 0.8,          // vertical bob speed
-      yPhase: Math.random() * Math.PI * 2,         // offset so they don't sync
-      tiltAmp: 8 + Math.random() * 12,            // slight tilt as they fly
+      speed: (0.3 + Math.random() * 0.25) * dir,
+      yBase: (Math.random() - 0.5) * 100,
+      yAmp: 50 + Math.random() * 80,
+      ySpeed: 0.8 + Math.random() * 1.0,
+      yPhase: Math.random() * Math.PI * 2,
+      tiltAmp: 10 + Math.random() * 15,
       tiltPhase: Math.random() * Math.PI * 2,
       el: card
     });
   });
 
-  // ── TOUCH / MOUSE — drag to look around ──
+  // ── MOUSE / TOUCH — hold and drag to look around ──
   let dragStartX = 0, dragStartY = 0, dragMoved = false;
 
   function onStart(x, y) {
@@ -1633,23 +1651,38 @@ function initGallery() {
     if (!galDragging) return;
     const dx = x - galLastX;
     const dy = y - galLastY;
-    if (Math.abs(x - dragStartX) > 6 || Math.abs(y - dragStartY) > 6) dragMoved = true;
-    galYaw -= dx * 0.35;
-    galPitch += dy * 0.25;
+    if (Math.abs(x - dragStartX) > 15 || Math.abs(y - dragStartY) > 15) dragMoved = true;
+    galYaw -= dx * 0.4;
+    galPitch += dy * 0.3;
     galPitch = Math.max(-50, Math.min(50, galPitch));
-    galVelX = -dx * 0.35;
-    galVelY = dy * 0.25;
+    galVelX = -dx * 0.4;
+    galVelY = dy * 0.3;
     galLastX = x; galLastY = y;
   }
 
   function onEnd() { galDragging = false; }
 
-  container.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientX, e.clientY); });
-  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
-  window.addEventListener('mouseup', onEnd);
-  container.addEventListener('touchstart', e => onStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
-  container.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
-  container.addEventListener('touchend', onEnd);
+  // mousedown on document so it works even if clicking on cards
+  document.addEventListener('mousedown', e => {
+    if (!document.getElementById('pageGallery').classList.contains('active')) return;
+    onStart(e.clientX, e.clientY);
+  }, sig);
+  document.addEventListener('mousemove', e => {
+    if (!document.getElementById('pageGallery').classList.contains('active')) return;
+    onMove(e.clientX, e.clientY);
+  }, sig);
+  document.addEventListener('mouseup', onEnd, sig);
+
+  document.addEventListener('touchstart', e => {
+    if (!document.getElementById('pageGallery').classList.contains('active')) return;
+    onStart(e.touches[0].clientX, e.touches[0].clientY);
+  }, { ...sig, passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!document.getElementById('pageGallery').classList.contains('active')) return;
+    if (e.cancelable) e.preventDefault();
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { ...sig, passive: false });
+  document.addEventListener('touchend', onEnd, sig);
 
   // ── GYROSCOPE ──
   if (gyroHandler) { window.removeEventListener('deviceorientation', gyroHandler); gyroHandler = null; }
@@ -1691,55 +1724,50 @@ function initGallery() {
     if (dragMoved || flyOpen) return;
     flyOpen = true;
 
-    // Get the card's screen position
+    // Get the card's current screen position (works with 3D transforms)
     const rect = card.getBoundingClientRect();
     flySourceRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
 
-    // Create a clone that flies
+    // Create a clone that flies from the card position
     flyCard = document.createElement('div');
     flyCard.className = 'fly-card';
     const img = document.createElement('img');
     img.src = card.querySelector('img').src;
     flyCard.appendChild(img);
 
-    // Start at card's screen position
+    // Start at card's current screen position
     flyCard.style.left = rect.left + 'px';
     flyCard.style.top = rect.top + 'px';
     flyCard.style.width = rect.width + 'px';
     flyCard.style.height = rect.height + 'px';
     document.body.appendChild(flyCard);
-
-    // Show backdrop
     backdrop.classList.add('active');
 
-    // Fly to center of screen
-    requestAnimationFrame(() => {
+    // Next frame: fly to center of screen at full size
+    requestAnimationFrame(() => { requestAnimationFrame(() => {
       const vw = window.innerWidth;
       const vh = window.innerHeight;
-      // Target: centered, max 90vw or 85vh, keep aspect ratio
       const imgEl = card.querySelector('img');
       const natW = imgEl.naturalWidth || 400;
       const natH = imgEl.naturalHeight || 600;
       const maxW = vw * 0.88;
       const maxH = vh * 0.82;
-      const scale = Math.min(maxW / natW, maxH / natH);
-      const finalW = natW * scale;
-      const finalH = natH * scale;
-      const finalL = (vw - finalW) / 2;
-      const finalT = (vh - finalH) / 2;
+      const s = Math.min(maxW / natW, maxH / natH);
+      const fw = natW * s;
+      const fh = natH * s;
 
-      flyCard.style.left = finalL + 'px';
-      flyCard.style.top = finalT + 'px';
-      flyCard.style.width = finalW + 'px';
-      flyCard.style.height = finalH + 'px';
-    });
+      flyCard.style.left = ((vw - fw) / 2) + 'px';
+      flyCard.style.top = ((vh - fh) / 2) + 'px';
+      flyCard.style.width = fw + 'px';
+      flyCard.style.height = fh + 'px';
+    }); });
 
-    // Mark as landed after animation
     setTimeout(() => {
-      if (flyCard) flyCard.classList.add('landed');
-      // Tap the landed card or backdrop to dismiss
-      if (flyCard) flyCard.addEventListener('click', closeCard);
-    }, 650);
+      if (flyCard) {
+        flyCard.classList.add('landed');
+        flyCard.addEventListener('click', closeCard);
+      }
+    }, 700);
   }
 
   function closeCard() {
@@ -1748,7 +1776,7 @@ function initGallery() {
     flyCard.classList.add('returning');
     backdrop.classList.remove('active');
 
-    // Fly back to source position
+    // Fly back to where the card currently is on screen
     flyCard.style.left = flySourceRect.left + 'px';
     flyCard.style.top = flySourceRect.top + 'px';
     flyCard.style.width = flySourceRect.width + 'px';
@@ -1761,10 +1789,10 @@ function initGallery() {
     }, 550);
   }
 
-  backdrop.addEventListener('click', closeCard);
+  backdrop.addEventListener('click', closeCard, sig);
 
   cards.forEach(card => {
-    card.addEventListener('click', () => openCard(card));
+    card.addEventListener('click', () => openCard(card), sig);
   });
 
   // ── MAIN ANIMATION LOOP — orbit cards + apply look ──
@@ -1788,23 +1816,19 @@ function initGallery() {
     // Apply look direction to scene
     scene.style.transform = `rotateX(${galPitch}deg) rotateY(${galYaw}deg)`;
 
-    // Orbit each card — flying around, going up and down freely
+    // Orbit each card in a ring around the user
     for (const cd of cardData) {
       cd.angle += cd.speed;
       if (cd.angle >= 360) cd.angle -= 360;
+      if (cd.angle < 0) cd.angle += 360;
 
-      const rad = cd.angle * Math.PI / 180;
-      const x = radius * Math.sin(rad);
-      const z = radius * Math.cos(rad);
-
-      // Big alive vertical movement
       const y = cd.yBase + Math.sin(time * 0.008 * cd.ySpeed + cd.yPhase) * cd.yAmp;
-
-      // Slight tilt/wobble as they fly (feels organic)
       const tilt = Math.sin(time * 0.006 + cd.tiltPhase) * cd.tiltAmp;
 
+      // rotateY first to set direction, then translateZ to push outward on the ring
+      // This places each card at a point on a circle, facing the center (the user)
       cd.el.style.transform =
-        `translate3d(${x}px, ${-y}px, ${-z}px) rotateY(${cd.angle}deg) rotateZ(${tilt}deg)`;
+        `rotateY(${cd.angle}deg) translateZ(${radius}px) translateY(${-y}px) rotateZ(${tilt}deg)`;
     }
 
     galleryRAF = requestAnimationFrame(animate);
