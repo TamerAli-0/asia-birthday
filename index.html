@@ -1317,7 +1317,13 @@ function initGallery() {
     galLastX = x; galLastY = y;
   }
 
-  function onEnd() { galDragging = false; }
+  function onEnd() {
+    galDragging = false;
+    // Recalibrate gyro to current yaw so it picks up seamlessly
+    gyroYawOffset = galYaw;
+    gyroBaseA = null;
+    gyroReady = false;
+  }
 
   document.addEventListener('mousedown', e => {
     if (!document.getElementById('pageGallery').classList.contains('active')) return;
@@ -1346,9 +1352,8 @@ function initGallery() {
 
   gyroHandler = function(e) {
     if (e.alpha === null) return;
-    if (!gyroReady) { gyroBaseA = e.alpha; gyroYawOffset = galYaw; gyroReady = true; return; }
-    // While dragging: keep recalibrating so gyro picks up from where drag leaves off
-    if (galDragging) { gyroBaseA = e.alpha; gyroYawOffset = galYaw; return; }
+    if (!gyroReady) { gyroBaseA = e.alpha; gyroReady = true; return; }
+    if (galDragging) return; // completely silent during touch
     let dA = e.alpha - gyroBaseA;
     if (dA > 180) dA -= 360;
     if (dA < -180) dA += 360;
