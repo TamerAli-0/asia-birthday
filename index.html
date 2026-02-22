@@ -894,19 +894,17 @@ canvas {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0,0,0,0.92);
-  backdrop-filter: blur(20px);
+  background: rgba(0,0,0,0);
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
   pointer-events: none;
-  transition: opacity 0.4s ease;
-  cursor: zoom-out;
+  transition: background 0.5s ease;
+  cursor: pointer;
 }
 
 .photo-overlay.active {
-  opacity: 1;
+  background: rgba(0,0,0,0.92);
   pointer-events: auto;
 }
 
@@ -914,38 +912,32 @@ canvas {
   max-width: 92vw;
   max-height: 90vh;
   object-fit: contain;
-  border-radius: 8px;
-  box-shadow: 0 0 60px rgba(180,77,255,0.2), 0 20px 80px rgba(0,0,0,0.8);
-  transform: scale(0.85);
-  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  border-radius: 10px;
+  box-shadow:
+    0 0 40px rgba(180,77,255,0.3),
+    0 0 80px rgba(255,45,149,0.15),
+    0 20px 80px rgba(0,0,0,0.8);
+  transform: scale(0.1) rotate(-8deg);
+  opacity: 0;
+  transition: transform 0.7s cubic-bezier(0.16,1.2,0.3,1), opacity 0.4s ease;
 }
 
 .photo-overlay.active img {
-  transform: scale(1);
+  transform: scale(1) rotate(0deg);
+  opacity: 1;
 }
 
-.overlay-close {
-  position: absolute;
-  top: 20px;
-  right: 24px;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.15);
-  background: rgba(255,255,255,0.05);
-  color: rgba(255,255,255,0.5);
-  font-size: 1.4rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s;
+.photo-overlay.closing img {
+  transform: scale(0.1) rotate(8deg);
+  opacity: 0;
+  transition: transform 0.5s cubic-bezier(0.6,0,0.7,0.2), opacity 0.4s ease;
 }
 
-.overlay-close:hover {
-  border-color: var(--neon-pink);
-  color: var(--neon-pink);
-  box-shadow: 0 0 15px rgba(255,45,149,0.3);
+#overlayTrail {
+  position: fixed;
+  inset: 0;
+  z-index: 99;
+  pointer-events: none;
 }
 
 @media (max-width: 600px) {
@@ -1062,8 +1054,8 @@ canvas {
 
     <p class="gallery-hint" id="galleryHint">hold &amp; drag to look around &middot; tap a photo to view</p>
 
+    <canvas id="overlayTrail"></canvas>
     <div class="photo-overlay" id="photoOverlay">
-      <button class="overlay-close" id="overlayClose">&times;</button>
       <img id="overlayImg" src="" alt="Full view">
     </div>
   </section>
@@ -1707,20 +1699,126 @@ function initGallery() {
     enableGyro();
   }
 
-  // ── CARD TAP — fullscreen photo ──
+  // ── PARTICLE TRAIL ──
+  const trailCanvas = document.getElementById('overlayTrail');
+  const trailCtx = trailCanvas.getContext('2d');
+  let trailParticles = [];
+  let trailRAF = null;
+
+  function resizeTrail() {
+    trailCanvas.width = window.innerWidth;
+    trailCanvas.height = window.innerHeight;
+  }
+  resizeTrail();
+  window.addEventListener('resize', resizeTrail);
+
+  function spawnTrail() {
+    const cx = trailCanvas.width / 2;
+    const cy = trailCanvas.height / 2;
+    const colors = ['#b44dff', '#ff2d95', '#00d4ff', '#ffb800', '#00ff88', '#e879f9'];
+
+    for (let i = 0; i < 40; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 3 + 1.5;
+      trailParticles.push({
+        x: cx + (Math.random() - 0.5) * 60,
+        y: cy + (Math.random() - 0.5) * 60,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        r: Math.random() * 3 + 1,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+        decay: Math.random() * 0.015 + 0.008
+      });
+    }
+
+    if (!trailRAF) animateTrail();
+  }
+
+  function spawnDismissTrail() {
+    const cx = trailCanvas.width / 2;
+    const cy = trailCanvas.height / 2;
+    const colors = ['#b44dff', '#ff2d95', '#ffb800'];
+
+    for (let i = 0; i < 25; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = Math.random() * 4 + 2;
+      trailParticles.push({
+        x: cx + (Math.random() - 0.5) * 200,
+        y: cy + (Math.random() - 0.5) * 200,
+        vx: -Math.cos(angle) * speed,
+        vy: -Math.sin(angle) * speed,
+        r: Math.random() * 2.5 + 0.5,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 1,
+        decay: Math.random() * 0.02 + 0.012
+      });
+    }
+
+    if (!trailRAF) animateTrail();
+  }
+
+  function animateTrail() {
+    trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+
+    for (let i = trailParticles.length - 1; i >= 0; i--) {
+      const p = trailParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vx *= 0.97;
+      p.vy *= 0.97;
+      p.life -= p.decay;
+
+      if (p.life <= 0) {
+        trailParticles.splice(i, 1);
+        continue;
+      }
+
+      trailCtx.beginPath();
+      trailCtx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+      trailCtx.fillStyle = p.color;
+      trailCtx.globalAlpha = p.life * 0.8;
+      trailCtx.shadowColor = p.color;
+      trailCtx.shadowBlur = 12;
+      trailCtx.fill();
+    }
+
+    trailCtx.globalAlpha = 1;
+    trailCtx.shadowBlur = 0;
+
+    if (trailParticles.length > 0) {
+      trailRAF = requestAnimationFrame(animateTrail);
+    } else {
+      trailRAF = null;
+    }
+  }
+
+  // ── CARD TAP — fly in with trail ──
+  let overlayOpen = false;
+
   cards.forEach(card => {
     card.addEventListener('click', () => {
-      if (dragMoved) return;
+      if (dragMoved || overlayOpen) return;
       const img = card.querySelector('img');
       overlayImg.src = img.src;
+      overlay.classList.remove('closing');
       overlay.classList.add('active');
+      overlayOpen = true;
+      spawnTrail();
     });
   });
 
-  function closeOverlay() { overlay.classList.remove('active'); }
-  overlayClose.addEventListener('click', e => { e.stopPropagation(); closeOverlay(); });
-  overlay.addEventListener('click', closeOverlay);
-  overlayImg.addEventListener('click', e => e.stopPropagation());
+  // Tap photo or overlay to fly it back
+  overlay.addEventListener('click', () => {
+    if (!overlayOpen) return;
+    overlay.classList.add('closing');
+    spawnDismissTrail();
+    setTimeout(() => {
+      overlay.classList.remove('active');
+      overlay.classList.remove('closing');
+      overlayOpen = false;
+    }, 500);
+  });
 
   // ── ANIMATION LOOP ──
   function animate() {
