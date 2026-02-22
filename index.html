@@ -1601,15 +1601,19 @@ function initGallery() {
   galVelX = 0;
   galVelY = 0;
 
-  // Each card orbits at its own angle, speed, and height
-  const radius = window.innerWidth < 600 ? 280 : 380;
+  // Each card orbits freely — different speeds, heights, directions
+  const radius = window.innerWidth < 600 ? 260 : 360;
   const cardData = [];
   cards.forEach((card, i) => {
     cardData.push({
-      angle: (i / cards.length) * 360,           // evenly spaced
-      speed: 0.15 + Math.random() * 0.08,        // slightly different speeds
-      yOff: (i % 2 === 0 ? -1 : 1) * (15 + Math.random() * 20),  // vertical wobble
-      ySpeed: 0.4 + Math.random() * 0.3,         // bobbing speed
+      angle: (i / cards.length) * 360,
+      speed: 0.12 + Math.random() * 0.15,         // varied orbit speeds
+      yBase: (Math.random() - 0.5) * 80,          // random base height
+      yAmp: 40 + Math.random() * 60,              // big vertical swing (40-100px)
+      ySpeed: 0.6 + Math.random() * 0.8,          // vertical bob speed
+      yPhase: Math.random() * Math.PI * 2,         // offset so they don't sync
+      tiltAmp: 8 + Math.random() * 12,            // slight tilt as they fly
+      tiltPhase: Math.random() * Math.PI * 2,
       el: card
     });
   });
@@ -1784,7 +1788,7 @@ function initGallery() {
     // Apply look direction to scene
     scene.style.transform = `rotateX(${galPitch}deg) rotateY(${galYaw}deg)`;
 
-    // Orbit each card around the user
+    // Orbit each card — flying around, going up and down freely
     for (const cd of cardData) {
       cd.angle += cd.speed;
       if (cd.angle >= 360) cd.angle -= 360;
@@ -1792,11 +1796,15 @@ function initGallery() {
       const rad = cd.angle * Math.PI / 180;
       const x = radius * Math.sin(rad);
       const z = radius * Math.cos(rad);
-      const y = cd.yOff + Math.sin(time * 0.01 * cd.ySpeed) * 12; // gentle bobbing
 
-      // Position and always face center
+      // Big alive vertical movement
+      const y = cd.yBase + Math.sin(time * 0.008 * cd.ySpeed + cd.yPhase) * cd.yAmp;
+
+      // Slight tilt/wobble as they fly (feels organic)
+      const tilt = Math.sin(time * 0.006 + cd.tiltPhase) * cd.tiltAmp;
+
       cd.el.style.transform =
-        `translate3d(${x}px, ${-y}px, ${-z}px) rotateY(${cd.angle}deg)`;
+        `translate3d(${x}px, ${-y}px, ${-z}px) rotateY(${cd.angle}deg) rotateZ(${tilt}deg)`;
     }
 
     galleryRAF = requestAnimationFrame(animate);
