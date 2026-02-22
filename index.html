@@ -1351,7 +1351,7 @@ function initGallery() {
     let dA = e.alpha - gyroBaseA;
     if (dA > 180) dA -= 360;
     if (dA < -180) dA += 360;
-    const targetYaw = -dA * Math.PI / 120;
+    const targetYaw = dA * Math.PI / 120;
     galYaw += (targetYaw - galYaw) * 0.08;
   };
 
