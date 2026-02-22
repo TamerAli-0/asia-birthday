@@ -668,7 +668,7 @@ canvas {
     <canvas id="particleCanvas3" style="position:absolute;inset:0;z-index:0;pointer-events:none;"></canvas>
     <button class="gallery-back" id="galleryBack">&#8249; Back</button>
     <div id="galleryRenderer"></div>
-    <p class="gallery-hint" id="galleryHint">drag to look around &middot; tap a photo</p>
+    <p class="gallery-hint" id="galleryHint">swipe to look around &middot; tap a photo</p>
   </section>
 
   <script>
@@ -819,7 +819,12 @@ initParticleField('particleCanvas', {
 // ══════════════════════════════════
 const birthdayAudio = document.getElementById('birthdayAudio');
 
-function initAudio() {}
+function initAudio() {
+  // Unlock audio on mobile — must happen inside user gesture
+  if (birthdayAudio) {
+    birthdayAudio.play().then(() => { birthdayAudio.pause(); birthdayAudio.currentTime = 0; }).catch(() => {});
+  }
+}
 
 function playHappyBirthday() {
   if (!birthdayAudio) return;
@@ -1002,11 +1007,6 @@ document.getElementById('galleryBack').addEventListener('click', () => {
 
   stopAmbientPiano();
   if (galleryRAF) { cancelAnimationFrame(galleryRAF); galleryRAF = null; }
-  gyroActive = false;
-  if (gyroHandler) {
-    window.removeEventListener('deviceorientation', gyroHandler);
-    gyroHandler = null;
-  }
   if (galAbort) { galAbort.abort(); galAbort = null; }
   if (galRenderer) {
     const c = document.getElementById('galleryRenderer');
@@ -1044,8 +1044,6 @@ document.getElementById('galleryBack').addEventListener('click', () => {
 //  3D GALLERY — THREE.JS ORBITING PHOTOS
 // ══════════════════════════════════
 let galleryRAF = null;
-let gyroActive = false;
-let gyroHandler = null;
 let galAbort = null;
 let galRenderer = null;
 let galScene3 = null;
@@ -1309,11 +1307,9 @@ function initGallery() {
     const dx = x - galLastX;
     const dy = y - galLastY;
     if (Math.abs(x - dragStartX) > 15 || Math.abs(y - dragStartY) > 15) dragMoved = true;
-    const sens = 0.003;
+    const sens = 0.004;
     galYaw -= dx * sens;
     galPitch += dy * sens;
-    const maxP = 50 * Math.PI / 180;
-    galPitch = Math.max(-maxP, Math.min(maxP, galPitch));
     galVelX = -dx * sens;
     galVelY = dy * sens;
     galLastX = x; galLastY = y;
@@ -1341,37 +1337,6 @@ function initGallery() {
     onMove(e.touches[0].clientX, e.touches[0].clientY);
   }, { ...sig, passive: false });
   document.addEventListener('touchend', onEnd, sig);
-
-  // ── Gyroscope ──
-  if (gyroHandler) { window.removeEventListener('deviceorientation', gyroHandler); gyroHandler = null; }
-  gyroActive = false;
-  let gyroBaseA = null, gyroBaseB = null, gyroReady = false;
-
-  gyroHandler = function(e) {
-    if (e.alpha === null || e.beta === null) return;
-    if (!gyroReady) { gyroBaseA = e.alpha; gyroBaseB = e.beta; gyroReady = true; gyroActive = true; return; }
-    let dA = e.alpha - gyroBaseA;
-    if (dA > 180) dA -= 360;
-    if (dA < -180) dA += 360;
-    let dB = e.beta - gyroBaseB;
-    if (!galDragging) {
-      const tY = -dA * Math.PI / 120;
-      const tP = Math.max(-50 * Math.PI / 180, Math.min(50 * Math.PI / 180, -dB * Math.PI / 180));
-      galYaw += (tY - galYaw) * 0.1;
-      galPitch += (tP - galPitch) * 0.1;
-    }
-  };
-
-  if ('ontouchstart' in window) {
-    if (typeof DeviceOrientationEvent !== 'undefined' &&
-        typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission()
-        .then(p => { if (p === 'granted') window.addEventListener('deviceorientation', gyroHandler); })
-        .catch(() => {});
-    } else {
-      window.addEventListener('deviceorientation', gyroHandler);
-    }
-  }
 
   // ── Card click detection (raycasting) ──
   const raycaster = new THREE.Raycaster();
@@ -1475,12 +1440,10 @@ function initGallery() {
     const dt = clock.getDelta();
     time += dt;
 
-    // Momentum when not dragging and no gyro
-    if (!galDragging && !gyroActive) {
+    // Momentum when not dragging
+    if (!galDragging) {
       galYaw += galVelX;
       galPitch += galVelY;
-      const maxP = 50 * Math.PI / 180;
-      galPitch = Math.max(-maxP, Math.min(maxP, galPitch));
       galVelX *= 0.93;
       galVelY *= 0.93;
       if (Math.abs(galVelX) < 0.00005) galVelX = 0;
