@@ -804,7 +804,7 @@ canvas {
 .page-gallery.active { display: flex; animation: pageFadeIn 1.2s ease; }
 
 .gallery-3d {
-  perspective: 1000px;
+  perspective: 800px;
   width: 100vw;
   height: 100vh;
   display: flex;
@@ -823,16 +823,17 @@ canvas {
 
 .gallery-card {
   position: absolute;
-  width: 160px;
-  height: 230px;
+  width: 140px;
+  height: 200px;
   cursor: pointer;
-  border-radius: 12px;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid rgba(180,77,255,0.25);
+  border: 1.5px solid rgba(180,77,255,0.35);
   box-shadow:
-    0 0 15px rgba(180,77,255,0.15),
-    0 0 40px rgba(0,0,0,0.5);
+    0 0 20px rgba(180,77,255,0.2),
+    0 0 50px rgba(255,45,149,0.1);
   transform-style: preserve-3d;
+  will-change: transform;
 }
 
 .gallery-card img {
@@ -841,6 +842,66 @@ canvas {
   object-fit: cover;
   display: block;
   pointer-events: none;
+}
+
+/* The flying card clone that animates to/from user */
+.fly-card {
+  position: fixed;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid rgba(180,77,255,0.4);
+  box-shadow:
+    0 0 30px rgba(180,77,255,0.3),
+    0 0 60px rgba(255,45,149,0.15);
+  z-index: 200;
+  pointer-events: none;
+  will-change: transform, left, top, width, height;
+  transition: left 0.6s cubic-bezier(0.25,1,0.5,1),
+              top 0.6s cubic-bezier(0.25,1,0.5,1),
+              width 0.6s cubic-bezier(0.25,1,0.5,1),
+              height 0.6s cubic-bezier(0.25,1,0.5,1),
+              border-radius 0.6s ease,
+              opacity 0.3s ease;
+}
+
+.fly-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.fly-card.landed {
+  pointer-events: auto;
+  cursor: pointer;
+  border-radius: 6px;
+  box-shadow:
+    0 0 50px rgba(180,77,255,0.3),
+    0 0 100px rgba(255,45,149,0.15),
+    0 30px 80px rgba(0,0,0,0.7);
+}
+
+.fly-card.returning {
+  transition: left 0.5s cubic-bezier(0.5,0,0.75,0),
+              top 0.5s cubic-bezier(0.5,0,0.75,0),
+              width 0.5s cubic-bezier(0.5,0,0.75,0),
+              height 0.5s cubic-bezier(0.5,0,0.75,0),
+              border-radius 0.5s ease,
+              opacity 0.4s ease 0.2s;
+}
+
+.fly-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  z-index: 190;
+  transition: background 0.5s ease;
+  pointer-events: none;
+}
+
+.fly-backdrop.active {
+  background: rgba(0,0,0,0.85);
+  pointer-events: auto;
 }
 
 .gallery-hint {
@@ -852,15 +913,19 @@ canvas {
   font-size: 0.7rem;
   letter-spacing: 4px;
   text-transform: uppercase;
-  color: rgba(255,255,255,0.2);
+  color: rgba(255,255,255,0.25);
   text-align: center;
-  animation: hintFade 4s ease 2s forwards;
   pointer-events: none;
+  animation: hintFade 5s ease 3s forwards;
 }
 
 @keyframes hintFade {
   0% { opacity: 1; }
   100% { opacity: 0; }
+}
+
+@media (max-width: 600px) {
+  .gallery-card { width: 110px; height: 155px; }
 }
 
 .gallery-back {
@@ -889,56 +954,7 @@ canvas {
   box-shadow: 0 0 15px rgba(180,77,255,0.2);
 }
 
-/* Photo overlay */
-.photo-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  background: rgba(0,0,0,0);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  transition: background 0.5s ease;
-  cursor: pointer;
-}
-
-.photo-overlay.active {
-  background: rgba(0,0,0,0.92);
-  pointer-events: auto;
-}
-
-.photo-overlay img {
-  max-width: 92vw;
-  max-height: 90vh;
-  object-fit: contain;
-  border-radius: 10px;
-  box-shadow:
-    0 0 40px rgba(180,77,255,0.3),
-    0 0 80px rgba(255,45,149,0.15),
-    0 20px 80px rgba(0,0,0,0.8);
-  transform: scale(0.1) rotate(-8deg);
-  opacity: 0;
-  transition: transform 0.7s cubic-bezier(0.16,1.2,0.3,1), opacity 0.4s ease;
-}
-
-.photo-overlay.active img {
-  transform: scale(1) rotate(0deg);
-  opacity: 1;
-}
-
-.photo-overlay.closing img {
-  transform: scale(0.1) rotate(8deg);
-  opacity: 0;
-  transition: transform 0.5s cubic-bezier(0.6,0,0.7,0.2), opacity 0.4s ease;
-}
-
-#overlayTrail {
-  position: fixed;
-  inset: 0;
-  z-index: 99;
-  pointer-events: none;
-}
+/* (photo overlay removed — using fly-card instead) */
 
 @media (max-width: 600px) {
   .gallery-card {
@@ -1053,12 +1069,8 @@ canvas {
       </div>
     </div>
 
-    <p class="gallery-hint" id="galleryHint">move your phone to look around &middot; tap a photo to view</p>
-
-    <canvas id="overlayTrail"></canvas>
-    <div class="photo-overlay" id="photoOverlay">
-      <img id="overlayImg" src="" alt="Full view">
-    </div>
+    <p class="gallery-hint" id="galleryHint">move your phone around &middot; tap a photo</p>
+    <div class="fly-backdrop" id="flyBackdrop"></div>
   </section>
 
   <script>
@@ -1115,8 +1127,6 @@ function initStars(id, colored) {
       if (s.color) {
         ctx.fillStyle = s.color;
         ctx.globalAlpha = s.a * tw;
-        ctx.shadowColor = s.color;
-        ctx.shadowBlur = 8;
       } else {
         ctx.fillStyle = `rgba(255,255,255,${s.a * tw})`;
         ctx.shadowBlur = 0;
@@ -1391,7 +1401,7 @@ nextBtn.addEventListener('click', () => {
     pageCake.style.display = 'none';
     pageMem.classList.add('active');
     initStars('starsCanvas2', true);
-    initParticleField('particleCanvas2', { count: 80 });
+    initParticleField('particleCanvas2', { count: 50, lite: true });
     initSlideshow();
   }, 800);
 });
@@ -1546,7 +1556,7 @@ document.getElementById('galleryBack').addEventListener('click', () => {
     pageGal.style.opacity = '';
     pageGal.style.transition = '';
     pageMem.classList.add('active');
-    initParticleField('particleCanvas2', { count: 80 });
+    initParticleField('particleCanvas2', { count: 50, lite: true });
     initSlideshow();
 
     // Restart memories audio
@@ -1567,7 +1577,7 @@ document.getElementById('galleryBack').addEventListener('click', () => {
 });
 
 // ══════════════════════════════════
-//  3D GALLERY — FIRST PERSON LOOK-AROUND
+//  3D GALLERY — ORBITING PHOTOS + GYRO LOOK
 // ══════════════════════════════════
 let galYaw = 0;
 let galPitch = 0;
@@ -1583,8 +1593,7 @@ let gyroHandler = null;
 function initGallery() {
   const scene = document.getElementById('galleryScene');
   const container = document.getElementById('gallery3d');
-  const overlay = document.getElementById('photoOverlay');
-  const overlayImg = document.getElementById('overlayImg');
+  const backdrop = document.getElementById('flyBackdrop');
   const cards = document.querySelectorAll('.gallery-card');
 
   galYaw = 0;
@@ -1592,43 +1601,28 @@ function initGallery() {
   galVelX = 0;
   galVelY = 0;
 
-  // Place cards all around the user in a sphere
-  const positions = [
-    { yaw: 25,   pitch: 5   },
-    { yaw: 100,  pitch: 15  },
-    { yaw: 160,  pitch: -10 },
-    { yaw: 200,  pitch: 20  },
-    { yaw: 250,  pitch: -15 },
-    { yaw: 310,  pitch: 10  },
-    { yaw: 180,  pitch: -5  },
-  ];
-
-  const radius = window.innerWidth < 600 ? 300 : 420;
-
+  // Each card orbits at its own angle, speed, and height
+  const radius = window.innerWidth < 600 ? 280 : 380;
+  const cardData = [];
   cards.forEach((card, i) => {
-    const p = positions[i];
-    const yRad = p.yaw * Math.PI / 180;
-    const xRad = p.pitch * Math.PI / 180;
-    const x = radius * Math.sin(yRad) * Math.cos(xRad);
-    const y = radius * Math.sin(xRad);
-    const z = radius * Math.cos(yRad) * Math.cos(xRad);
-    card.style.transform =
-      `translate3d(${x}px, ${-y}px, ${-z}px) ` +
-      `rotateY(${p.yaw}deg) rotateX(${-p.pitch}deg)`;
+    cardData.push({
+      angle: (i / cards.length) * 360,           // evenly spaced
+      speed: 0.15 + Math.random() * 0.08,        // slightly different speeds
+      yOff: (i % 2 === 0 ? -1 : 1) * (15 + Math.random() * 20),  // vertical wobble
+      ySpeed: 0.4 + Math.random() * 0.3,         // bobbing speed
+      el: card
+    });
   });
 
-  // ── TOUCH / MOUSE — hold and drag to look around ──
+  // ── TOUCH / MOUSE — drag to look around ──
   let dragStartX = 0, dragStartY = 0, dragMoved = false;
 
   function onStart(x, y) {
     galDragging = true;
-    galLastX = x;
-    galLastY = y;
-    dragStartX = x;
-    dragStartY = y;
+    galLastX = x; galLastY = y;
+    dragStartX = x; dragStartY = y;
     dragMoved = false;
-    galVelX = 0;
-    galVelY = 0;
+    galVelX = 0; galVelY = 0;
   }
 
   function onMove(x, y) {
@@ -1636,15 +1630,12 @@ function initGallery() {
     const dx = x - galLastX;
     const dy = y - galLastY;
     if (Math.abs(x - dragStartX) > 6 || Math.abs(y - dragStartY) > 6) dragMoved = true;
-
-    galYaw -= dx * 0.4;
-    galPitch += dy * 0.3;
-    galPitch = Math.max(-60, Math.min(60, galPitch));
-
-    galVelX = -dx * 0.4;
-    galVelY = dy * 0.3;
-    galLastX = x;
-    galLastY = y;
+    galYaw -= dx * 0.35;
+    galPitch += dy * 0.25;
+    galPitch = Math.max(-50, Math.min(50, galPitch));
+    galVelX = -dx * 0.35;
+    galVelY = dy * 0.25;
+    galLastX = x; galLastY = y;
   }
 
   function onEnd() { galDragging = false; }
@@ -1652,183 +1643,162 @@ function initGallery() {
   container.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientX, e.clientY); });
   window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
   window.addEventListener('mouseup', onEnd);
-
-  container.addEventListener('touchstart', e => {
-    onStart(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
-  container.addEventListener('touchmove', e => {
-    e.preventDefault();
-    onMove(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: false });
+  container.addEventListener('touchstart', e => onStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  container.addEventListener('touchmove', e => { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }, { passive: false });
   container.addEventListener('touchend', onEnd);
 
-  // ── GYROSCOPE — physically move phone to look around ──
-  // Remove old handler if re-init
-  if (gyroHandler) {
-    window.removeEventListener('deviceorientation', gyroHandler);
-    gyroHandler = null;
-  }
+  // ── GYROSCOPE ──
+  if (gyroHandler) { window.removeEventListener('deviceorientation', gyroHandler); gyroHandler = null; }
   gyroActive = false;
-
-  let gyroBaseAlpha = null;
-  let gyroBaseBeta = null;
-  let gyroReady = false;
+  let gyroBaseA = null, gyroBaseB = null, gyroReady = false;
 
   gyroHandler = function(e) {
     if (e.alpha === null || e.beta === null) return;
-
-    // Calibrate baseline after a few readings for stability
-    if (!gyroReady) {
-      gyroBaseAlpha = e.alpha;
-      gyroBaseBeta = e.beta;
-      gyroReady = true;
-      gyroActive = true;
-      return;
-    }
-
-    // Delta from baseline
-    let dAlpha = e.alpha - gyroBaseAlpha;
-    if (dAlpha > 180) dAlpha -= 360;
-    if (dAlpha < -180) dAlpha += 360;
-    let dBeta = e.beta - gyroBaseBeta;
-
-    // Smoothly blend gyro into the current view (not override)
+    if (!gyroReady) { gyroBaseA = e.alpha; gyroBaseB = e.beta; gyroReady = true; gyroActive = true; return; }
+    let dA = e.alpha - gyroBaseA;
+    if (dA > 180) dA -= 360;
+    if (dA < -180) dA += 360;
+    let dB = e.beta - gyroBaseB;
     if (!galDragging) {
-      // Target angles from gyro
-      const targetYaw = -dAlpha * 1.5;
-      const targetPitch = Math.max(-60, Math.min(60, -dBeta * 1.0));
-      // Smooth lerp
-      galYaw += (targetYaw - galYaw) * 0.1;
-      galPitch += (targetPitch - galPitch) * 0.1;
+      const tY = -dA * 1.5;
+      const tP = Math.max(-50, Math.min(50, -dB * 1.0));
+      galYaw += (tY - galYaw) * 0.1;
+      galPitch += (tP - galPitch) * 0.1;
     }
   };
 
-  // Enable gyro
-  function tryEnableGyro() {
+  if ('ontouchstart' in window) {
     if (typeof DeviceOrientationEvent !== 'undefined' &&
         typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS — needs user gesture
       DeviceOrientationEvent.requestPermission()
-        .then(perm => {
-          if (perm === 'granted') window.addEventListener('deviceorientation', gyroHandler);
-        })
+        .then(p => { if (p === 'granted') window.addEventListener('deviceorientation', gyroHandler); })
         .catch(() => {});
     } else {
-      // Android — just listen
       window.addEventListener('deviceorientation', gyroHandler);
     }
   }
 
-  // On mobile, try gyro immediately
-  if ('ontouchstart' in window) {
-    tryEnableGyro();
+  // ── CARD TAP — fly the card to user's face ──
+  let flyCard = null;
+  let flyOpen = false;
+  let flySourceRect = null;
+
+  function openCard(card) {
+    if (dragMoved || flyOpen) return;
+    flyOpen = true;
+
+    // Get the card's screen position
+    const rect = card.getBoundingClientRect();
+    flySourceRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+
+    // Create a clone that flies
+    flyCard = document.createElement('div');
+    flyCard.className = 'fly-card';
+    const img = document.createElement('img');
+    img.src = card.querySelector('img').src;
+    flyCard.appendChild(img);
+
+    // Start at card's screen position
+    flyCard.style.left = rect.left + 'px';
+    flyCard.style.top = rect.top + 'px';
+    flyCard.style.width = rect.width + 'px';
+    flyCard.style.height = rect.height + 'px';
+    document.body.appendChild(flyCard);
+
+    // Show backdrop
+    backdrop.classList.add('active');
+
+    // Fly to center of screen
+    requestAnimationFrame(() => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      // Target: centered, max 90vw or 85vh, keep aspect ratio
+      const imgEl = card.querySelector('img');
+      const natW = imgEl.naturalWidth || 400;
+      const natH = imgEl.naturalHeight || 600;
+      const maxW = vw * 0.88;
+      const maxH = vh * 0.82;
+      const scale = Math.min(maxW / natW, maxH / natH);
+      const finalW = natW * scale;
+      const finalH = natH * scale;
+      const finalL = (vw - finalW) / 2;
+      const finalT = (vh - finalH) / 2;
+
+      flyCard.style.left = finalL + 'px';
+      flyCard.style.top = finalT + 'px';
+      flyCard.style.width = finalW + 'px';
+      flyCard.style.height = finalH + 'px';
+    });
+
+    // Mark as landed after animation
+    setTimeout(() => {
+      if (flyCard) flyCard.classList.add('landed');
+      // Tap the landed card or backdrop to dismiss
+      if (flyCard) flyCard.addEventListener('click', closeCard);
+    }, 650);
   }
 
-  // ── PHOTO TAP WITH TRAIL ──
-  const trailCanvas = document.getElementById('overlayTrail');
-  const trailCtx = trailCanvas.getContext('2d');
-  let trailParticles = [];
-  let trailRAF = null;
+  function closeCard() {
+    if (!flyOpen || !flyCard) return;
+    flyCard.classList.remove('landed');
+    flyCard.classList.add('returning');
+    backdrop.classList.remove('active');
 
-  function resizeTrail() {
-    trailCanvas.width = window.innerWidth;
-    trailCanvas.height = window.innerHeight;
-  }
-  resizeTrail();
-  window.addEventListener('resize', resizeTrail);
+    // Fly back to source position
+    flyCard.style.left = flySourceRect.left + 'px';
+    flyCard.style.top = flySourceRect.top + 'px';
+    flyCard.style.width = flySourceRect.width + 'px';
+    flyCard.style.height = flySourceRect.height + 'px';
+    flyCard.style.opacity = '0';
 
-  function spawnBurst(implode) {
-    const cx = trailCanvas.width / 2;
-    const cy = trailCanvas.height / 2;
-    const colors = ['#b44dff', '#ff2d95', '#00d4ff', '#ffb800', '#00ff88'];
-    const count = implode ? 20 : 30;
-
-    for (let i = 0; i < count; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = Math.random() * 3 + 1.5;
-      const dir = implode ? -1 : 1;
-      trailParticles.push({
-        x: cx + (Math.random() - 0.5) * (implode ? 200 : 60),
-        y: cy + (Math.random() - 0.5) * (implode ? 200 : 60),
-        vx: Math.cos(angle) * speed * dir,
-        vy: Math.sin(angle) * speed * dir,
-        r: Math.random() * 2.5 + 1,
-        color: colors[Math.floor(Math.random() * colors.length)],
-        life: 1,
-        decay: Math.random() * 0.018 + 0.008
-      });
-    }
-    if (!trailRAF) animateTrail();
+    setTimeout(() => {
+      if (flyCard) { flyCard.remove(); flyCard = null; }
+      flyOpen = false;
+    }, 550);
   }
 
-  function animateTrail() {
-    trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
-
-    for (let i = trailParticles.length - 1; i >= 0; i--) {
-      const p = trailParticles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vx *= 0.96;
-      p.vy *= 0.96;
-      p.life -= p.decay;
-
-      if (p.life <= 0) { trailParticles.splice(i, 1); continue; }
-
-      trailCtx.beginPath();
-      trailCtx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
-      trailCtx.fillStyle = p.color;
-      trailCtx.globalAlpha = p.life * 0.7;
-      trailCtx.fill();
-    }
-    trailCtx.globalAlpha = 1;
-
-    if (trailParticles.length > 0) {
-      trailRAF = requestAnimationFrame(animateTrail);
-    } else {
-      trailRAF = null;
-    }
-  }
-
-  // Card click — fly in
-  let overlayOpen = false;
+  backdrop.addEventListener('click', closeCard);
 
   cards.forEach(card => {
-    card.addEventListener('click', () => {
-      if (dragMoved || overlayOpen) return;
-      overlayImg.src = card.querySelector('img').src;
-      overlay.classList.remove('closing');
-      overlay.classList.add('active');
-      overlayOpen = true;
-      spawnBurst(false);
-    });
+    card.addEventListener('click', () => openCard(card));
   });
 
-  // Tap photo to fly it back
-  overlay.addEventListener('click', () => {
-    if (!overlayOpen) return;
-    overlay.classList.add('closing');
-    spawnBurst(true);
-    setTimeout(() => {
-      overlay.classList.remove('active', 'closing');
-      overlayOpen = false;
-    }, 500);
-  });
+  // ── MAIN ANIMATION LOOP — orbit cards + apply look ──
+  let time = 0;
 
-  // ── ANIMATION LOOP ──
   function animate() {
     if (!document.getElementById('pageGallery').classList.contains('active')) return;
+    time++;
 
+    // Momentum when not dragging and no gyro
     if (!galDragging && !gyroActive) {
       galYaw += galVelX;
       galPitch += galVelY;
-      galPitch = Math.max(-60, Math.min(60, galPitch));
-      galVelX *= 0.92;
-      galVelY *= 0.92;
-      if (Math.abs(galVelX) < 0.01) galVelX = 0;
-      if (Math.abs(galVelY) < 0.01) galVelY = 0;
+      galPitch = Math.max(-50, Math.min(50, galPitch));
+      galVelX *= 0.93;
+      galVelY *= 0.93;
+      if (Math.abs(galVelX) < 0.005) galVelX = 0;
+      if (Math.abs(galVelY) < 0.005) galVelY = 0;
     }
 
+    // Apply look direction to scene
     scene.style.transform = `rotateX(${galPitch}deg) rotateY(${galYaw}deg)`;
+
+    // Orbit each card around the user
+    for (const cd of cardData) {
+      cd.angle += cd.speed;
+      if (cd.angle >= 360) cd.angle -= 360;
+
+      const rad = cd.angle * Math.PI / 180;
+      const x = radius * Math.sin(rad);
+      const z = radius * Math.cos(rad);
+      const y = cd.yOff + Math.sin(time * 0.01 * cd.ySpeed) * 12; // gentle bobbing
+
+      // Position and always face center
+      cd.el.style.transform =
+        `translate3d(${x}px, ${-y}px, ${-z}px) rotateY(${cd.angle}deg)`;
+    }
+
     galleryRAF = requestAnimationFrame(animate);
   }
 
