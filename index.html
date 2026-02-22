@@ -788,6 +788,173 @@ canvas {
 }
 
 
+/* ══════════════════════════════════
+   PAGE — 3D GALLERY
+   ══════════════════════════════════ */
+.page-gallery {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 50;
+}
+
+.page-gallery.active { display: flex; animation: pageFadeIn 1.2s ease; }
+
+.gallery-3d {
+  perspective: 1000px;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+}
+
+.gallery-scene {
+  width: 0;
+  height: 0;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.gallery-card {
+  position: absolute;
+  width: 160px;
+  height: 230px;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(180,77,255,0.25);
+  box-shadow:
+    0 0 15px rgba(180,77,255,0.15),
+    0 0 40px rgba(0,0,0,0.5);
+  transform-style: preserve-3d;
+}
+
+.gallery-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+
+.gallery-hint {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  font-size: 0.7rem;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+  animation: hintFade 4s ease 2s forwards;
+  pointer-events: none;
+}
+
+@keyframes hintFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.gallery-back {
+  position: fixed;
+  top: 24px;
+  left: 24px;
+  z-index: 20;
+  padding: 10px 20px;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 50px;
+  background: rgba(6,6,14,0.6);
+  backdrop-filter: blur(10px);
+  color: rgba(255,255,255,0.4);
+  font-family: inherit;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.gallery-back:hover {
+  border-color: var(--neon-purple);
+  color: var(--neon-purple);
+  box-shadow: 0 0 15px rgba(180,77,255,0.2);
+}
+
+/* Photo overlay */
+.photo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0,0,0,0.92);
+  backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  cursor: zoom-out;
+}
+
+.photo-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.photo-overlay img {
+  max-width: 92vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 0 60px rgba(180,77,255,0.2), 0 20px 80px rgba(0,0,0,0.8);
+  transform: scale(0.85);
+  transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+.photo-overlay.active img {
+  transform: scale(1);
+}
+
+.overlay-close {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.5);
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.overlay-close:hover {
+  border-color: var(--neon-pink);
+  color: var(--neon-pink);
+  box-shadow: 0 0 15px rgba(255,45,149,0.3);
+}
+
+@media (max-width: 600px) {
+  .gallery-card {
+    width: 120px;
+    height: 170px;
+  }
+}
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
@@ -870,10 +1037,35 @@ canvas {
       <p class="msg-sign">with all my love</p>
     </div>
 
-    <button class="again-btn" id="againBtn">Experience Again</button>
+    <button class="again-btn" id="againBtn">Enter the Gallery</button>
     <audio id="birthdayAudio" src="birthday-piano.mp3" loop></audio>
     <audio id="memoriesAudio" src="memories.mp3" loop></audio>
     <button class="music-btn" id="musicBtn" onclick="document.getElementById('memoriesAudio').play();this.style.display='none';">&#9654; Play Music</button>
+  </section>
+
+  <!-- ═══ PAGE 3: 3D GALLERY ═══ -->
+  <section class="page page-gallery" id="pageGallery">
+    <canvas id="starsCanvas3"></canvas>
+    <button class="gallery-back" id="galleryBack">&#8249; Back</button>
+
+    <div class="gallery-3d" id="gallery3d">
+      <div class="gallery-scene" id="galleryScene">
+        <div class="gallery-card"><img src="photos/631238345_1413865627105763_1098670414832295385_n.jpg" alt="Memory 1"></div>
+        <div class="gallery-card"><img src="photos/632605426_2743496372651771_5087056815613210159_n.jpg" alt="Memory 2"></div>
+        <div class="gallery-card"><img src="photos/634555843_1977783543137215_8727257106951131452_n.jpg" alt="Memory 3"></div>
+        <div class="gallery-card"><img src="photos/634716292_1987974791811645_1033515507445936490_n.jpg" alt="Memory 4"></div>
+        <div class="gallery-card"><img src="photos/634846621_1489609379369334_1468262594684237586_n.jpg" alt="Memory 5"></div>
+        <div class="gallery-card"><img src="photos/636680558_1438960177824267_4786415350908794643_n.jpg" alt="Memory 6"></div>
+        <div class="gallery-card"><img src="photos/637013449_801733399623594_2609924921644433182_n.jpg" alt="Memory 7"></div>
+      </div>
+    </div>
+
+    <p class="gallery-hint" id="galleryHint">look around &middot; tap a photo to view</p>
+
+    <div class="photo-overlay" id="photoOverlay">
+      <button class="overlay-close" id="overlayClose">&times;</button>
+      <img id="overlayImg" src="" alt="Full view">
+    </div>
   </section>
 
   <script>
@@ -1275,12 +1467,23 @@ function resetAutoAdvance() {
 }
 
 // ══════════════════════════════════
-//  EXPERIENCE AGAIN
+//  ENTER THE GALLERY (replaces Experience Again)
 // ══════════════════════════════════
 document.getElementById('againBtn').addEventListener('click', () => {
   clearInterval(slideTimer);
-  const pageCake = document.getElementById('pageCake');
   const pageMem = document.getElementById('pageMemories');
+  const pageGal = document.getElementById('pageGallery');
+
+  // Fade out memories audio
+  const memAudio = document.getElementById('memoriesAudio');
+  if (memAudio) {
+    let vol = memAudio.volume;
+    const fo = setInterval(() => {
+      vol -= 0.03;
+      if (vol <= 0) { vol = 0; memAudio.pause(); clearInterval(fo); }
+      memAudio.volume = vol;
+    }, 50);
+  }
 
   pageMem.style.transition = 'opacity 0.8s ease';
   pageMem.style.opacity = '0';
@@ -1289,31 +1492,309 @@ document.getElementById('againBtn').addEventListener('click', () => {
     pageMem.classList.remove('active');
     pageMem.style.opacity = '';
     pageMem.style.transition = '';
-
-    pageCake.style.display = '';
-    pageCake.style.opacity = '';
-    pageCake.style.transition = '';
-    hbTitle.classList.remove('visible');
-    hbName.classList.remove('visible');
-    plate.classList.remove('visible');
-    layer1.classList.remove('visible');
-    layer2.classList.remove('visible');
-    layer3.classList.remove('visible');
-    document.querySelectorAll('.neon-drip').forEach(d => d.classList.remove('visible'));
-    candleEls.forEach(c => c.classList.remove('visible'));
-    flame1.classList.remove('lit');
-    flame2.classList.remove('lit');
-    flame3.classList.remove('lit');
-    nextBtn.classList.remove('visible');
-
-    const memAudio = document.getElementById('memoriesAudio');
-    if (memAudio) { memAudio.pause(); memAudio.currentTime = 0; }
-    const bdayAudio = document.getElementById('birthdayAudio');
-    if (bdayAudio) { bdayAudio.pause(); bdayAudio.currentTime = 0; }
-
-    setTimeout(runCakeSequence, 400);
+    pageGal.classList.add('active');
+    initStars('starsCanvas3');
+    initGallery();
+    startAmbientPiano();
   }, 800);
 });
+
+// ══════════════════════════════════
+//  GALLERY BACK BUTTON
+// ══════════════════════════════════
+document.getElementById('galleryBack').addEventListener('click', () => {
+  const pageGal = document.getElementById('pageGallery');
+  const pageMem = document.getElementById('pageMemories');
+
+  stopAmbientPiano();
+  cancelAnimationFrame(galleryRAF);
+  galleryRAF = null;
+
+  pageGal.style.transition = 'opacity 0.8s ease';
+  pageGal.style.opacity = '0';
+
+  setTimeout(() => {
+    pageGal.classList.remove('active');
+    pageGal.style.opacity = '';
+    pageGal.style.transition = '';
+    pageMem.classList.add('active');
+    initSlideshow();
+
+    // Restart memories audio
+    const memAudio = document.getElementById('memoriesAudio');
+    if (memAudio) {
+      memAudio.volume = 0;
+      memAudio.play().catch(() => {});
+      let v = 0;
+      const fi = setInterval(() => {
+        v += 0.03;
+        if (v >= 1) { v = 1; clearInterval(fi); }
+        memAudio.volume = v;
+      }, 50);
+    }
+    const btn = document.getElementById('musicBtn');
+    if (btn) btn.style.display = 'none';
+  }, 800);
+});
+
+// ══════════════════════════════════
+//  3D GALLERY
+// ══════════════════════════════════
+let galYaw = 0;    // horizontal look
+let galPitch = 0;  // vertical look
+let galVelX = 0;
+let galVelY = 0;
+let galDragging = false;
+let galLastX = 0;
+let galLastY = 0;
+let galleryRAF = null;
+
+function initGallery() {
+  const scene = document.getElementById('galleryScene');
+  const container = document.getElementById('gallery3d');
+  const overlay = document.getElementById('photoOverlay');
+  const overlayImg = document.getElementById('overlayImg');
+  const overlayClose = document.getElementById('overlayClose');
+  const cards = document.querySelectorAll('.gallery-card');
+
+  galYaw = 20;
+  galPitch = 0;
+  galVelX = 0;
+  galVelY = 0;
+
+  // Place cards in a 3D sphere around the user
+  // Each card gets a unique yaw + pitch so they surround you
+  const positions = [
+    { yaw: 0,    pitch: 0   },   // front
+    { yaw: 85,   pitch: 12  },   // right, slightly up
+    { yaw: 155,  pitch: -8  },   // right-behind, slightly down
+    { yaw: 210,  pitch: 15  },   // behind-left, up
+    { yaw: 280,  pitch: -10 },   // left, slightly down
+    { yaw: 330,  pitch: 18  },   // front-left, up
+    { yaw: 130,  pitch: -18 },   // right-behind, down
+  ];
+
+  const radius = window.innerWidth < 600 ? 280 : 400;
+
+  cards.forEach((card, i) => {
+    const p = positions[i];
+    const yRad = p.yaw * Math.PI / 180;
+    const xRad = p.pitch * Math.PI / 180;
+
+    // Convert spherical to cartesian
+    const x = radius * Math.sin(yRad) * Math.cos(xRad);
+    const y = radius * Math.sin(xRad);
+    const z = radius * Math.cos(yRad) * Math.cos(xRad);
+
+    // Position and face toward center
+    card.style.transform =
+      `translate3d(${x}px, ${-y}px, ${-z}px) ` +
+      `rotateY(${p.yaw}deg) rotateX(${-p.pitch}deg)`;
+  });
+
+  // Drag / touch — look around in both axes
+  let dragStartX = 0, dragStartY = 0, dragMoved = false;
+
+  function onStart(x, y) {
+    galDragging = true;
+    galLastX = x;
+    galLastY = y;
+    dragStartX = x;
+    dragStartY = y;
+    dragMoved = false;
+    galVelX = 0;
+    galVelY = 0;
+  }
+
+  function onMove(x, y) {
+    if (!galDragging) return;
+    const dx = x - galLastX;
+    const dy = y - galLastY;
+
+    if (Math.abs(x - dragStartX) > 8 || Math.abs(y - dragStartY) > 8) dragMoved = true;
+
+    galYaw -= dx * 0.25;
+    galPitch += dy * 0.2;
+    // Clamp vertical look so you don't flip upside down
+    galPitch = Math.max(-45, Math.min(45, galPitch));
+
+    galVelX = -dx * 0.25;
+    galVelY = dy * 0.2;
+    galLastX = x;
+    galLastY = y;
+  }
+
+  function onEnd() {
+    galDragging = false;
+  }
+
+  container.addEventListener('mousedown', e => { e.preventDefault(); onStart(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e => onMove(e.clientX, e.clientY));
+  window.addEventListener('mouseup', onEnd);
+
+  container.addEventListener('touchstart', e => onStart(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+  container.addEventListener('touchmove', e => {
+    e.preventDefault();
+    onMove(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false });
+  container.addEventListener('touchend', onEnd);
+
+  // Card click — open full photo
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      if (dragMoved) return;
+      const img = card.querySelector('img');
+      overlayImg.src = img.src;
+      overlay.classList.add('active');
+    });
+  });
+
+  // Close overlay
+  function closeOverlay() { overlay.classList.remove('active'); }
+  overlayClose.addEventListener('click', e => { e.stopPropagation(); closeOverlay(); });
+  overlay.addEventListener('click', closeOverlay);
+  overlayImg.addEventListener('click', e => e.stopPropagation());
+
+  // Animation loop
+  function animate() {
+    if (!document.getElementById('pageGallery').classList.contains('active')) return;
+
+    if (!galDragging) {
+      // Momentum with friction
+      galYaw += galVelX;
+      galPitch += galVelY;
+      galPitch = Math.max(-45, Math.min(45, galPitch));
+      galVelX *= 0.94;
+      galVelY *= 0.94;
+      if (Math.abs(galVelX) < 0.01) galVelX = 0;
+      if (Math.abs(galVelY) < 0.01) galVelY = 0;
+    }
+
+    scene.style.transform = `rotateX(${galPitch}deg) rotateY(${galYaw}deg)`;
+    galleryRAF = requestAnimationFrame(animate);
+  }
+
+  animate();
+}
+
+// ══════════════════════════════════
+//  GENERATIVE AMBIENT PIANO
+// ══════════════════════════════════
+let pianoCtx = null;
+let pianoGain = null;
+let pianoTimer = null;
+let pianoConvolver = null;
+
+function createReverb(ctx) {
+  const convolver = ctx.createConvolver();
+  const rate = ctx.sampleRate;
+  const length = rate * 3;
+  const impulse = ctx.createBuffer(2, length, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = impulse.getChannelData(ch);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 2.5);
+    }
+  }
+  convolver.buffer = impulse;
+  return convolver;
+}
+
+function startAmbientPiano() {
+  pianoCtx = new (window.AudioContext || window.webkitAudioContext)();
+  pianoGain = pianoCtx.createGain();
+  pianoGain.gain.value = 0.25;
+
+  pianoConvolver = createReverb(pianoCtx);
+  const wetGain = pianoCtx.createGain();
+  wetGain.gain.value = 0.6;
+  const dryGain = pianoCtx.createGain();
+  dryGain.gain.value = 0.4;
+
+  pianoGain.connect(dryGain);
+  dryGain.connect(pianoCtx.destination);
+  pianoGain.connect(pianoConvolver);
+  pianoConvolver.connect(wetGain);
+  wetGain.connect(pianoCtx.destination);
+
+  // Pentatonic notes across octaves (dreamy, no dissonance)
+  const notes = [
+    261.63, 293.66, 329.63, 392.00, 440.00,  // C4 D4 E4 G4 A4
+    523.25, 587.33, 659.25, 783.99, 880.00,  // C5 D5 E5 G5 A5
+    130.81, 146.83, 164.81, 196.00, 220.00   // C3 D3 E3 G3 A3
+  ];
+
+  let lastNote = -1;
+
+  function playNote() {
+    if (!pianoCtx || pianoCtx.state === 'closed') return;
+
+    // Pick a note (avoid repeating the same one)
+    let idx;
+    do { idx = Math.floor(Math.random() * notes.length); } while (idx === lastNote);
+    lastNote = idx;
+    const freq = notes[idx];
+    const t = pianoCtx.currentTime;
+
+    // Main tone (sine — warm piano fundamental)
+    const osc = pianoCtx.createOscillator();
+    const g = pianoCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    g.gain.setValueAtTime(0.3, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 3.5);
+    osc.connect(g);
+    g.connect(pianoGain);
+    osc.start(t);
+    osc.stop(t + 4);
+
+    // Soft overtone (triangle, octave up)
+    const osc2 = pianoCtx.createOscillator();
+    const g2 = pianoCtx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.value = freq * 2;
+    g2.gain.setValueAtTime(0.06, t);
+    g2.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
+    osc2.connect(g2);
+    g2.connect(pianoGain);
+    osc2.start(t);
+    osc2.stop(t + 3);
+
+    // Sometimes play a chord (30% chance)
+    if (Math.random() < 0.3) {
+      const chordNote = notes[(idx + 2) % notes.length];
+      const osc3 = pianoCtx.createOscillator();
+      const g3 = pianoCtx.createGain();
+      osc3.type = 'sine';
+      osc3.frequency.value = chordNote;
+      g3.gain.setValueAtTime(0.15, t + 0.1);
+      g3.gain.exponentialRampToValueAtTime(0.001, t + 3);
+      osc3.connect(g3);
+      g3.connect(pianoGain);
+      osc3.start(t + 0.1);
+      osc3.stop(t + 3.5);
+    }
+
+    // Schedule next note (1.2 - 2.8 seconds)
+    const next = 1200 + Math.random() * 1600;
+    pianoTimer = setTimeout(playNote, next);
+  }
+
+  playNote();
+}
+
+function stopAmbientPiano() {
+  if (pianoTimer) { clearTimeout(pianoTimer); pianoTimer = null; }
+  if (pianoCtx && pianoCtx.state !== 'closed') {
+    if (pianoGain) {
+      pianoGain.gain.linearRampToValueAtTime(0, pianoCtx.currentTime + 1.5);
+    }
+    setTimeout(() => {
+      if (pianoCtx && pianoCtx.state !== 'closed') pianoCtx.close().catch(() => {});
+      pianoCtx = null;
+    }, 2000);
+  }
+}
   </script>
 </body>
 </html>
