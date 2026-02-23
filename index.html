@@ -1660,8 +1660,8 @@ function startAmbientPiano() {
     osc2.start(t);
     osc2.stop(t + 3);
 
-    // Sometimes play a chord (30% chance)
-    if (Math.random() < 0.3) {
+    // Play a chord (50% chance)
+    if (Math.random() < 0.5) {
       const chordNote = notes[(idx + 2) % notes.length];
       const osc3 = pianoCtx.createOscillator();
       const g3 = pianoCtx.createGain();
@@ -1675,8 +1675,25 @@ function startAmbientPiano() {
       osc3.stop(t + 3.5);
     }
 
-    // Schedule next note (1.2 - 2.8 seconds)
-    const next = 1200 + Math.random() * 1600;
+    // Quick follow-up note (40% chance — creates flowing pairs)
+    if (Math.random() < 0.4) {
+      const followIdx = (idx + Math.floor(Math.random() * 4) + 1) % notes.length;
+      const fFreq = notes[followIdx];
+      const delay = 0.25 + Math.random() * 0.3;
+      const osc4 = pianoCtx.createOscillator();
+      const g4 = pianoCtx.createGain();
+      osc4.type = 'sine';
+      osc4.frequency.value = fFreq;
+      g4.gain.setValueAtTime(0.2, t + delay);
+      g4.gain.exponentialRampToValueAtTime(0.001, t + delay + 3);
+      osc4.connect(g4);
+      g4.connect(pianoGain);
+      osc4.start(t + delay);
+      osc4.stop(t + delay + 3.5);
+    }
+
+    // Schedule next note (0.7 - 1.8 seconds)
+    const next = 700 + Math.random() * 1100;
     pianoTimer = setTimeout(playNote, next);
   }
 
